@@ -1,6 +1,6 @@
-From 01fb906ee1db01fe432ea441dc5911e9f0c39447 Mon Sep 17 00:00:00 2001
+From cbf71ba5d23f0d7f043bf32c43c051e749551e85 Mon Sep 17 00:00:00 2001
 From: Connor Anderson <canderson@yext.com>
-Date: Wed, 5 Jan 2022 14:31:10 -0500
+Date: Wed, 5 Jan 2022 15:46:45 -0500
 Subject: [PATCH] add cards with copy menu
 
 ---
@@ -12,8 +12,8 @@ Subject: [PATCH] add cards with copy menu
  .../template.hbs                              | 147 +++++++++++
  static/js/custom-modules.js                   |  25 ++
  static/js/iframe-common.js                    | 137 ++++++++++
- static/scss/answers.scss                      |  76 ++++++
- 9 files changed, 1126 insertions(+)
+ static/scss/answers.scss                      |  75 ++++++
+ 9 files changed, 1125 insertions(+)
  create mode 100644 cards/help-article-with-menu/component.js
  create mode 100644 cards/help-article-with-menu/template.hbs
  create mode 100644 directanswercards/allfields-standard-with-menu/component.js
@@ -1128,10 +1128,10 @@ index 0000000..c14f5bb
 +}
 \ No newline at end of file
 diff --git a/static/scss/answers.scss b/static/scss/answers.scss
-index 7affd01..204ffb3 100644
+index 7affd01..e22b14e 100644
 --- a/static/scss/answers.scss
 +++ b/static/scss/answers.scss
-@@ -28,0 +29,76 @@
+@@ -28,0 +29,75 @@
 +
 +.HitchhikerDocumentStandard-titleLink {
 +  display:inline-block;
@@ -1147,8 +1147,7 @@ index 7affd01..204ffb3 100644
 +}
 +
 +#js-answersDirectAnswer:hover .copyMenuWrapper,
-+.HitchhikerResultsStandard-Card:hover .copyMenuWrapper,
-+.HitchhikerDocumentStandard:hover .copyMenuWrapper {
++.HitchhikerResultsStandard-Card:hover .copyMenuWrapper {
 +  visibility: visible;
 +}
 +
