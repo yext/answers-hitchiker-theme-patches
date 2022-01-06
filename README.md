@@ -1,6 +1,6 @@
 # answers-hitchiker-theme-patches
 
-### Cards with copy menu
+### Add cards with copy menu
 The patch creates the cards allfields-standard-with-menu, documentsearch-standard-with-menu, and help-article-with-menu.
 These cards contain a menu when you hover over them which lets the user copy the result text or link from the card.
 The help-article-with-menu is a fork of document-standard.
