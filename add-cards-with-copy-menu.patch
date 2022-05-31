@@ -93,12 +93,12 @@ index 0000000..f0dd3d5
 +   * @override
 +   */
 +  static defaultTemplateName (config) {
-+    return 'cards/helpoverride';
++    return 'cards/help-article-with-menu';
 +  }
 +}
 +
 +ANSWERS.registerTemplate(
-+  'cards/helpoverride',
++  'cards/help-article-with-menu',
 +  {{{stringifyPartial (read 'cards/help-article-with-menu/template') }}}
 +);
 +ANSWERS.registerComponentType(helpArticleWithMenuCardComponent);
