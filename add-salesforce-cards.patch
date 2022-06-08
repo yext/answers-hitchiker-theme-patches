@@ -1,0 +1,1021 @@
+From 7f34c0aa082c0c42078b8784a44021a4d058268b Mon Sep 17 00:00:00 2001
+From: Oliver Shi <oshi@yext.com>
+Date: Wed, 8 Jun 2022 12:46:11 -0400
+Subject: [PATCH] Revert "remove cards/dacards"
+
+This reverts commit 9893cf82ebda5610bbebe1429ad13d6a5a8f9b96.
+---
+ cards/helpoverride/component.js               |  83 ++++++
+ cards/helpoverride/template.hbs               | 144 +++++++++++
+ .../allfields-standard-ellipses/component.js  | 243 ++++++++++++++++++
+ .../allfields-standard-ellipses/template.hbs  | 238 +++++++++++++++++
+ .../component.js                              |  79 ++++++
+ .../template.hbs                              | 170 ++++++++++++
+ 6 files changed, 957 insertions(+)
+ create mode 100644 cards/helpoverride/component.js
+ create mode 100644 cards/helpoverride/template.hbs
+ create mode 100644 directanswercards/allfields-standard-ellipses/component.js
+ create mode 100644 directanswercards/allfields-standard-ellipses/template.hbs
+ create mode 100644 directanswercards/documentsearch-standard-ellipses/component.js
+ create mode 100644 directanswercards/documentsearch-standard-ellipses/template.hbs
+
+diff --git a/cards/helpoverride/component.js b/cards/helpoverride/component.js
+new file mode 100644
+index 0000000..066e10b
+--- /dev/null
++++ b/cards/helpoverride/component.js
+@@ -0,0 +1,83 @@
++{{> cards/card_component componentName='helpoverride' }}
++
++class helpoverrideCardComponent extends BaseCard['helpoverride'] {
++  constructor(config = {}, systemConfig = {}) {
++    super(config, systemConfig);
++  }
++
++  /**
++   * This returns an object that will be called `card`
++   * in the template. Put all mapping logic here.
++   *
++   * @param profile profile of the entity in the card
++   */
++  dataForRender(profile) {
++    const linkTarget = AnswersExperience.runtimeConfig.get('linkTarget') || '_top';
++    const salesforcePageOrigin = AnswersExperience.runtimeConfig.get('salesforcePageOrigin');
++    const isChatterEnabled = AnswersExperience.runtimeConfig.get('isChatterEnabled') || false;
++    const areNotesEnabled = AnswersExperience.runtimeConfig.get('areNotesEnabled') || false;
++
++    let attachAsCase = (salesforcePageOrigin == "Case");
++    let postToChat = (salesforcePageOrigin == "LiveChatTranscript");
++
++    let detailsData = '';
++    if (profile?.d_highlightedFields?.s_snippet) {
++      const { value, matchedSubstrings } = profile.d_highlightedFields.s_snippet;
++      detailsData = Formatter.highlightField(value, matchedSubstrings);
++    } else if (profile.s_snippet) {
++      detailsData = profile.s_snippet;
++    }
++
++    return {
++      title: profile.name, // The header text of the card
++      url: profile.website || profile.landingPageUrl, // If the card title is a clickable link, set URL here
++      target: linkTarget, // If the title's URL should open in a new tab, etc.
++      // image: '', // The URL of the image to display on the card
++      // altText: '', // The alternate text for the image
++      titleEventOptions: this.addDefaultEventOptions(),
++      subtitle: profile.externalArticleUpdateDate ? `Last Updated on ${profile.externalArticleUpdateDate}` : '', // The sub-header text of the card
++      details: detailsData, // The text in the body of the card
++      menuCopyUrl: profile.website || profile.landingPageUrl,
++      menuCopyText: "`" + detailsData + "`",
++      attachAsCase: attachAsCase,
++      postToChat: postToChat,
++      isChatterEnabled: isChatterEnabled,
++      areNotesEnabled: areNotesEnabled,
++      // The primary CTA of the card
++      CTA1: {
++        label: "Read More", // The CTA's label
++        iconName: 'chevron', // The icon to use for the CTA
++        url: profile.website || profile.landingPageUrl, // The URL a user will be directed to when clicking
++        target: linkTarget, // Where the new URL will be opened
++        eventType: 'CTA_CLICK', // Type of Analytics event fired when clicking the CTA
++        eventOptions: this.addDefaultEventOptions(),
++        // ariaLabel: '', // Accessible text providing a descriptive label for the CTA
++      },
++      // The secondary CTA of the card
++      CTA2: {
++        label: profile.c_secondaryCTA ? profile.c_secondaryCTA.label : null,
++        iconName: 'chevron',
++        url: Formatter.generateCTAFieldTypeLink(profile.c_secondaryCTA),
++        target: linkTarget,
++        eventType: 'CTA_CLICK',
++        eventOptions: this.addDefaultEventOptions(),
++        // ariaLabel: '',
++      }
++    };
++  }
++
++  /**
++   * The template to render
++   * @returns {string}
++   * @override
++   */
++  static defaultTemplateName (config) {
++    return 'cards/helpoverride';
++  }
++}
++
++ANSWERS.registerTemplate(
++  'cards/helpoverride',
++  {{{stringifyPartial (read 'cards/helpoverride/template') }}}
++);
++ANSWERS.registerComponentType(helpoverrideCardComponent);
+\ No newline at end of file
+diff --git a/cards/helpoverride/template.hbs b/cards/helpoverride/template.hbs
+new file mode 100644
+index 0000000..d392d1b
+--- /dev/null
++++ b/cards/helpoverride/template.hbs
+@@ -0,0 +1,144 @@
++<div class="HitchhikerDocumentStandard {{cardName}}">
++  {{> image }}
++  <div class="HitchhikerDocumentStandard-body">
++    <div class="Card-header">
++    {{> title }}
++      </div>
++    {{> subtitle }}
++    <div class="HitchhikerDocumentStandard-contentWrapper">
++      <div class="HitchhikerDocumentStandard-info">
++        {{> details }}
++      </div>
++      {{> ctas }}
++    </div>
++  </div>
++</div>
++
++{{#*inline 'image'}}
++{{#if card.image}}
++<div class="HitchhikerDocumentStandard-imgWrapper">
++  <img class="HitchhikerDocumentStandard-img" src="{{#unless (isNonRelativeUrl card.image)}}{{@root.relativePath}}/{{/unless}}{{card.image}}" alt="{{#if card.altText}}{{card.altText}}{{/if}}"/>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'title'}}
++{{#if card.title}}
++<div class="HitchhikerDocumentStandard-title">
++  {{#if card.url}}
++  <a class="HitchhikerDocumentStandard-titleLink js-HitchhikerDocumentStandard-titleLink"
++     href="{{#unless (isNonRelativeUrl card.url)}}{{@root.relativePath}}/{{/unless}}{{card.url}}"
++     data-eventtype="TITLE_CLICK"
++     data-eventoptions='{{json card.titleEventOptions}}'
++     target={{#if card.target}}"{{card.target}}"{{else}}"_top"{{/if}}>
++    {{card.title}}
++  </a>
++  {{else}}
++  {{card.title}}
++  {{/if}}
++  {{> copyMenu }}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'subtitle'}}
++{{#if card.subtitle}}
++<div class="HitchhikerDocumentStandard-subtitle">
++  {{card.subtitle}}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'details'}}
++{{#if card.details}}
++<div class="HitchhikerDocumentStandard-cardDetails">
++  <div class="HitchhikerDocumentStandard-detailsText js-HitchhikerCard-detailsText">
++    {{{card.details}}}
++  </div>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'ctas'}}
++{{#if (any (all card.CTA1 card.CTA1.url card.CTA1.label) (all card.CTA2 card.CTA2.url card.CTA2.label))}}
++<div class="HitchhikerDocumentStandard-ctasWrapper">
++  {{> CTA card.CTA1 ctaName="primaryCTA" }}
++  {{> CTA card.CTA2 ctaName="secondaryCTA" }}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'CTA'}}
++{{#if (all url label)}}
++<div class="HitchhikerDocumentStandard-{{ctaName}}">
++  <a class="HitchhikerCTA js-HitchhikerCTA{{#if modifiers}} {{modifiers}}{{/if}}"
++    href="{{#unless (isNonRelativeUrl url)}}{{@root.relativePath}}/{{/unless}}{{url}}"
++    data-eventtype="{{eventType}}"
++    data-eventoptions='{{json eventOptions}}'
++    target="{{#if target}}{{target}}{{else}}_top{{/if}}"
++    {{#if ariaLabel}}aria-label="{{ariaLabel}}"{{/if}}>
++    {{#if (any iconName iconUrl)}}
++    <div class="HitchhikerCTA-iconWrapper">
++      <div class="HitchhikerCTA-icon" data-component="IconComponent" data-opts='{
++        "iconUrl": "{{#if iconUrl}}{{#unless (isNonRelativeUrl iconUrl)}}{{@root.relativePath}}/{{/unless}}{{iconUrl}}{{/if}}",
++        "iconName": "{{iconName}}"
++      }'></div>
++    </div>
++    {{/if}}
++    <div class='HitchhikerCTA-iconLabel'>
++      {{label}}
++    </div>
++  </a>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'copyMenu'}}
++{{#if (any card.menuCopyText card.menuCopyUrl card.attachAsCase card.postToChat card.isChatterEnabled card.areNotesEnabled)}}
++<div class="copyMenuWrapper">
++  <button class="copyMenuButton">
++    {{> icons/iconPartial
++        iconName="kabob"
++    }}
++  </button>
++  <div class="copyMenuOptionsWrapper">
++    {{#if card.menuCopyUrl}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'copyLink', {{json card}})">
++        <li class="copyMenu-copy-option made-visible">Copy Result Link</li>
++        <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if card.menuCopyText}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'copyResultText', {{json card}})">
++          <li class="copyMenu-copy-option made-visible">Copy Result Text</li>
++          <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if card.attachAsCase}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'attachToCase', {{json card}})">
++          <li class="copyMenu-copy-option made-visible">Attach to Case</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if card.areNotesEnabled}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'attachAsNote', {{json card}})">
++          <li class="copyMenu-copy-option made-visible">Attach as Note</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if card.postToChat}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'sendToChat', {{json card}})">
++          <li class="copyMenu-copy-option made-visible">Send to Chat</li>
++          <li class="copyMenu-copied-message"><div>Sent!</div></li>
++      </ul>
++    {{/if}}
++    {{#if card.isChatterEnabled}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessage(this, 'postToChatter', {{json card}})">
++          <li class="copyMenu-copy-option made-visible">Post to Chatter</li>
++          <li class="copyMenu-copied-message"><div>Posted!</div></li>
++      </ul>
++    {{/if}}
++  </div>
++</div> 
++{{/if}}
++{{/inline}}
+\ No newline at end of file
+diff --git a/directanswercards/allfields-standard-ellipses/component.js b/directanswercards/allfields-standard-ellipses/component.js
+new file mode 100644
+index 0000000..4139265
+--- /dev/null
++++ b/directanswercards/allfields-standard-ellipses/component.js
+@@ -0,0 +1,243 @@
++{{> directanswercards/card_component componentName = 'allfields-standard-ellipses' }}
++
++class allfields_standard_ellipsesComponent extends BaseDirectAnswerCard['allfields-standard-ellipses'] {
++  constructor(config = {}, systemConfig = {}) {
++    super(config, systemConfig);
++  }
++
++  /**
++   * @param type the type of direct answer
++   * @param answer the full answer returned from the API, corresponds to response.directAnswer.answer.
++   * @param relatedItem profile of the related entity for the direct answer
++   */
++  dataForRender(type, answer, relatedItem) {
++    let isArray = Array.isArray(answer.value);
++    let value, arrayValue, regularValue, isRichText, copyValue;
++    const linkTarget = AnswersExperience.runtimeConfig.get('linkTarget') || '_top';
++    const salesforcePageOrigin = AnswersExperience.runtimeConfig.get('salesforcePageOrigin');
++    const isChatterEnabled = AnswersExperience.runtimeConfig.get('isChatterEnabled') || false;
++    const areNotesEnabled = AnswersExperience.runtimeConfig.get('areNotesEnabled') || false;
++
++    let attachAsCase = (salesforcePageOrigin == "Case");
++    let postToChat = (salesforcePageOrigin == "LiveChatTranscript");
++
++    switch (answer.fieldType) {
++      case 'url':
++      case 'complex_url':
++      case 'ios_app_url':
++      case 'android_app_url':
++      case 'facebook_url':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ({
++              url: value,
++              label: value
++            }
++          ));
++          copyValue = arrayValue.map((value) => value.label).join("<br/>");
++        } else {
++          regularValue = {
++            url: answer.value,
++            label: answer.value
++          };
++          copyValue = regularValue.label;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'email':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ({
++              url: `mailto:${value}`,
++              label: value,
++            }
++          ));
++          copyValue = arrayValue.map((value) => value.label).join("<br/>");
++        } else {
++          regularValue = {
++            url: `mailto:${answer.value}`,
++            label: answer.value,
++          };
++          copyValue = regularValue.label;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'instagram_handle':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ({
++              url: `https://instagram.com/${value}`,
++              label: `@${value}`,
++            }
++          ));
++          copyValue = arrayValue.map((value) => value.label).join("<br/>");
++        } else {
++          regularValue = {
++            url: `https://instagram.com/${answer.value}`,
++            label: `@${answer.value}`,
++          };
++          copyValue = regularValue.label;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'twitter_handle':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ({
++              url: `https://twitter.com/${value}`,
++              label: `@${value}`,
++            }
++          ));
++          copyValue = arrayValue.map((value) => value.label).join("<br/>");
++        } else {
++          regularValue = {
++            url: `https://twitter.com/${answer.value}`,
++            label: `@${answer.value}`,
++          };
++          copyValue = regularValue.label;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'phone':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ({
++              url: Formatter.phoneLink({mainPhone: value}),
++              label: Formatter.nationalizedPhoneDisplay({mainPhone: value}),
++            }
++          ));
++          copyValue = arrayValue.map((value) => value.label).join("<br/>");
++        } else {
++          regularValue = {
++            url: Formatter.phoneLink({mainPhone: answer.value}),
++            label: Formatter.nationalizedPhoneDisplay({mainPhone: answer.value}),
++          };
++          copyValue = regularValue.label;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'address':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => Formatter.address({address: value}));
++          copyValue = arrayValue.join("<br/>");
++        } else {
++          regularValue = Formatter.address({address: answer.value});
++          copyValue = regularValue;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'hours':
++        const timezoneOffsetForLocation = relatedItem?.data?.fieldValues?.timeZoneUtcOffset;
++        if (isArray) {
++          arrayValue = answer.value.map((value) => {
++            const openStatus = Formatter.openStatus({
++              hours: value,
++              timeZoneUtcOffset: timezoneOffsetForLocation
++            });
++            return `<div>${openStatus}</div>`;
++          });
++          copyValue = arrayValue.join("<br/>");
++        } else {
++          const openStatus = Formatter.openStatus({
++            hours: answer.value,
++            timeZoneUtcOffset: timezoneOffsetForLocation
++          });
++          regularValue = `<div>${openStatus}</div>`;
++          copyValue = regularValue;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'decimal':
++        if (isArray) {
++          arrayValue = answer.value.map((value) => value.toLocaleString());
++          copyValue = arrayValue.join("<br/>");
++        } else {
++          regularValue = answer.value.toLocaleString();
++          copyValue = regularValue;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'rich_text':
++        isRichText = true;
++        if (isArray) {
++          arrayValue = answer.value.map((value) => ANSWERS.formatRichText(value, null, linkTarget));
++          copyValue = arrayValue.join("<br/>");
++        } else {
++          regularValue = ANSWERS.formatRichText(answer.value, null, linkTarget);
++          copyValue = regularValue;
++        }
++        value = isArray ? arrayValue : regularValue;
++        break;
++      case 'single_line_text':
++      case 'multi_line_text':
++      default:
++        value = answer.value;
++        copyValue = isArray ? value.join("<br/>") : value;
++        break;
++    }
++
++    // Optionally switch by field name
++    // switch (answer.fieldApiName) {
++    //   case 'mainPhone': // The Field API name
++    //     if (isArray) {
++    //       arrayValue = answer.value.map((value) => ({
++    //           url: Formatter.phoneLink({mainPhone: value}),
++    //           label: Formatter.nationalizedPhoneDisplay({mainPhone: value})
++    //         }
++    //       ));
++    //     } else {
++    //       regularValue = {
++    //         url: Formatter.phoneLink({mainPhone: answer.value}),
++    //         label: Formatter.nationalizedPhoneDisplay({mainPhone: answer.value})
++    //       };
++    //     }
++    //     value = isArray ? arrayValue : regularValue;
++    //     break;
++    // }
++
++    return {
++      // iconName: '', // Icon that appears on the top left of the direct answer card
++      // iconUrl: '', // URL for Icon that appears on the top left of the direct answer card
++      entityName: answer.entityName, // Root of the breadcrumb in the card heading (entityName / fieldName)
++      fieldName: answer.fieldName, // Folder of the breadcrumb (entityName / fieldName)
++      value: value || answer.value,
++      // link: '', // Link for the text of the direct answer
++      // linkEventOptions: this.addDefaultEventOptions(), // The event options for link click analytics
++      viewDetailsText: 'View Details', // Text below the direct answer
++      viewDetailsLink: relatedItem.data.website, // Link for the “view details” text
++      viewDetailsEventOptions: this.addDefaultEventOptions({
++        ctaLabel: 'VIEW_DETAILS'
++      }), // The event options for viewDetails click analytics
++      linkTarget: linkTarget, // Target for all links in the direct answer
++      // CTA: {
++      //   label: '', // The CTA's label
++      //   iconName: 'chevron', // The icon to use for the CTA
++      //   url: '', // The URL a user will be directed to when clicking
++      //   target: linkTarget, // Where the new URL will be opened
++      //   eventType: 'CTA_CLICK', // Type of Analytics event fired when clicking the CTA
++      //   eventOptions: this.addDefaultEventOptions() // The event options for CTA click analytics
++      // },
++      footerTextOnSubmission: 'Thank you for your feedback!', // Text to display in the footer when a thumbs up/down is clicked
++      footerText: 'Was this the answer you were looking for?', // Text to display in the footer
++      positiveFeedbackSrText: 'This answered my question', // Screen reader only text for thumbs-up
++      negativeFeedbackSrText: 'This did not answer my question', // Screen reader only text for thumbs-down
++      isRichText: isRichText, // If the direct answer is sourced from a rich-text field
++      menuCopyUrl: value.url,
++      menuCopyText: copyValue,
++      attachAsCase: attachAsCase,
++      postToChat: postToChat,
++      isChatterEnabled: isChatterEnabled,
++      areNotesEnabled: areNotesEnabled,
++    };
++  }
++
++  /**
++   * The template to render
++   * @returns {string}
++   * @override
++   */
++  static defaultTemplateName (config) {
++    return 'directanswercards/allfields-standard-ellipses';
++  }
++}
++
++ANSWERS.registerTemplate(
++  'directanswercards/allfields-standard-ellipses',
++  {{{stringifyPartial (read 'directanswercards/allfields-standard-ellipses/template') }}}
++);
++ANSWERS.registerComponentType(allfields_standard_ellipsesComponent);
+diff --git a/directanswercards/allfields-standard-ellipses/template.hbs b/directanswercards/allfields-standard-ellipses/template.hbs
+new file mode 100644
+index 0000000..abbdecb
+--- /dev/null
++++ b/directanswercards/allfields-standard-ellipses/template.hbs
+@@ -0,0 +1,238 @@
++<div class="HitchhikerAllFieldsStandard {{cardName}}">
++  {{#if (any iconName iconUrl entityName fieldName)}}
++  <div class="HitchhikerAllFieldsStandard-title">
++    {{> icon }}
++    {{> title }}
++    {{> copyMenu}}
++  </div>
++  {{/if}}
++  {{#if (any value (all viewDetailsLink viewDetailsText) (all CTA CTA.url CTA.label))}}
++  <div class="HitchhikerAllFieldsStandard-content">
++    <div class="HitchhikerAllFieldsStandard-column">
++      {{> answer_value }}
++      {{> view_details_link }}
++    </div>
++    {{> cta CTA linkTarget=linkTarget}}
++  </div>
++  {{/if}}
++  {{> footer }}
++</div>
++
++{{#*inline 'icon'}}
++{{#if (any iconName iconUrl)}}
++<div class="HitchhikerAllFieldsStandard-titleIconWrapper"></div>
++  {{> icons/iconPartial
++      iconName=iconName
++      iconUrl=(relativePathHandler url=iconUrl relativePath=@root.relativePath)
++  }}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'title'}}
++{{#if (any entityName fieldName)}}
++<h2 class="HitchhikerAllFieldsStandard-titleText">
++  {{#if link}}
++  <a class="HitchhikerAllFieldsStandard-titleLink"
++    href="{{#unless (isNonRelativeUrl link)}}{{@root.relativePath}}/{{/unless}}{{link}}"
++    target={{#if linkTarget}}"{{linkTarget}}"{{else}}"_blank"{{/if}}
++    data-eventtype={{#if linkEventType}}"{{linkEventType}}"{{else}}"TITLE_CLICK"{{/if}}
++    data-eventoptions='{{{json linkEventOptions}}}'>
++  {{/if}}
++  {{#if entityName}}
++  <span class="HitchhikerAllFieldsStandard-entityName">
++    {{entityName}}
++  </span>
++  {{/if}}
++  {{#if (all entityName fieldName)}}
++  <span class="HitchhikerAllFieldsStandard-slash">
++    /
++  </span>
++  {{/if}}
++  {{#if fieldName}}
++  <span class="HitchhikerAllFieldsStandard-fieldName">
++    {{fieldName}}
++  </span>
++  {{/if}}
++  {{#if link}}
++  </a>
++  {{/if}}
++</h2>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'answer_value'}}
++{{#if value}}
++<div class="HitchhikerAllFieldsStandard-fieldValue{{#if isRichText}} HitchhikerAllFieldsStandard-fieldValueRtf{{/if}}">
++  {{#if isArray}}
++    <ul class="HitchhikerAllFieldsStandard-ul">
++    {{#each value}}
++      {{#if (all url label)}}
++      <li class="HitchhikerAllFieldsStandard-listItem">
++        {{> value_link linkTarget=../linkTarget }}
++      </li>
++      {{else}}
++      <li class="HitchhikerAllFieldsStandard-listItem">
++        {{{this}}}
++      </li>
++      {{/if}}
++    {{/each}}
++    </ul>
++  {{else}}
++    {{#if (all value.url value.label)}}
++      {{> value_link value }}
++    {{else}}
++      {{{value}}}
++    {{/if}}
++  {{/if}}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'value_link'}}
++<a class="HitchhikerAllFieldsStandard-fieldValueLink"
++   href="{{#unless (isNonRelativeUrl url)}}{{@root.relativePath}}/{{/unless}}{{{url}}}"
++   target={{#if linkTarget}}"{{linkTarget}}"{{else}}"_blank"{{/if}}
++   {{#if eventType}}data-eventtype="{{eventType}}"{{/if}}
++   {{#if eventOptions}}data-eventoptions='{{{json eventOptions}}}'{{/if}}>
++  {{{label}}}
++</a>
++{{/inline}}
++
++{{#*inline 'view_details_link'}}
++{{#if (all viewDetailsLink viewDetailsText)}}
++  <div class="HitchhikerAllFieldsStandard-viewMoreWrapper">
++    <a class="HitchhikerAllFieldsStandard-viewMore"
++        href="{{#unless (isNonRelativeUrl viewDetailsLink)}}{{@root.relativePath}}/{{/unless}}{{viewDetailsLink}}"
++        data-eventtype="CTA_CLICK"
++        data-eventoptions='{{{json viewDetailsEventOptions}}}'
++        target="{{#if linkTarget}}{{linkTarget}}{{else}}_blank{{/if}}">
++      {{viewDetailsText}}
++    </a>
++  </div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'footer'}}
++{{#if (any footerTextOnSubmission footerText)}}
++<div class="HitchhikerAllFieldsStandard-footerWrapper">
++  <div class="HitchhikerAllFieldsStandard-footer">
++  {{#if feedbackSubmitted}}
++  <div class="HitchhikerAllFieldsStandard-footerText">
++      {{footerTextOnSubmission}}
++  </div>
++  {{else}}
++    <div class="HitchhikerAllFieldsStandard-footerText">
++      {{footerText}}
++    </div>
++    <form class="HitchhikerAllFieldsStandard-thumbs js-HitchhikerDirectAnswerCard-feedbackForm">
++      <fieldset class="HitchhikerAllFieldsStandard-fieldset">
++      <legend class="sr-only">
++        {{footerText}}
++      </legend>
++      <label class="HitchhikerAllFieldsStandard-thumb">
++        <span class="HitchhikerAllFieldsStandard-thumbUpIcon">
++          {{> icons/builtInIcon iconName='thumb' }}
++        </span>
++        <input type="radio"
++                name="feedback"
++                value="true"
++                class="HitchhikerAllFieldsStandard-feedback HitchhikerAllFieldsStandard-thumbUpButton js-HitchhikerDirectAnswerCard-thumbInput">
++        <span class="sr-only">
++          {{positiveFeedbackSrText}}
++        </span>
++      </label>
++      <label class="HitchhikerAllFieldsStandard-thumb">
++        <span class="HitchhikerAllFieldsStandard-thumbDownIcon">
++          {{> icons/builtInIcon iconName='thumb' }}
++        </span>
++        <input type="radio"
++                name="feedback"
++                value="false"
++                class="HitchhikerAllFieldsStandard-feedback HitchhikerAllFieldsStandard-thumbDownButton js-HitchhikerDirectAnswerCard-thumbInput">
++        <span class="sr-only">
++          {{negativeFeedbackSrText}}
++        </span>
++      </label>
++      </fieldset>
++      <button type="submit" class="sr-only sr-only-focusable">Send feedback</button>
++    </form>
++  {{/if}}
++  </div>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'cta'}}
++{{#if (all url label)}}
++<div class="HitchhikerAllFieldsStandard-cta">
++  <a class="HitchhikerCTA js-HitchhikerCTA{{#if modifiers}} {{modifiers}}{{/if}}" href="{{#unless (isNonRelativeUrl url)}}{{@root.relativePath}}/{{/unless}}{{url}}"
++    data-eventtype="{{eventType}}" data-eventoptions='{{{json eventOptions}}}'
++    target="{{#if target}}{{target}}{{else}}{{#if linkTarget}}{{linkTarget}}{{else}}_blank{{/if}}{{/if}}">
++    {{#if (any iconName iconUrl)}}
++    <div class="HitchhikerCTA-iconWrapper">
++      <div class="HitchhikerCTA-icon">
++        {{> icons/iconPartial
++            iconName=iconName
++            iconUrl=(relativePathHandler url=iconUrl relativePath=@root.relativePath)
++        }}
++      </div>
++    </div>
++    {{/if}}
++    <div class='HitchhikerCTA-iconLabel'>
++      {{label}}
++    </div>
++  </a>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'copyMenu'}}
++{{#if (any menuCopyText menuCopyUrl attachAsCase postToChat isChatterEnabled areNotesEnabled)}}
++<div class="copyMenuWrapper">
++  <button class="copyMenuButton">
++    {{> icons/iconPartial
++        iconName="kabob"
++    }}
++  </button>
++  <div class="copyMenuOptionsWrapper">
++    {{#if menuCopyUrl}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'copyLink', '{{entityName}}', '{{menuCopyUrl}}')">
++        <li class="copyMenu-copy-option made-visible">Copy Result Link</li>
++        <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if menuCopyText}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'copyResultText',' {{entityName}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Copy Result Text</li>
++          <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText attachAsCase)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'attachToCase', '{{entityName}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Attach to Case</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText areNotesEnabled)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'attachAsNote', '{{entityName}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Attach as Note</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText postToChat)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'sendToChat', '{{entityName}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Send to Chat</li>
++          <li class="copyMenu-copied-message"><div>Sent!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText isChatterEnabled)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'postToChatter', '{{entityName}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Post to Chatter</li>
++          <li class="copyMenu-copied-message"><div>Posted!</div></li>
++      </ul>
++    {{/if}}
++  </div>
++</div> 
++{{/if}}
++{{/inline}}
+\ No newline at end of file
+diff --git a/directanswercards/documentsearch-standard-ellipses/component.js b/directanswercards/documentsearch-standard-ellipses/component.js
+new file mode 100644
+index 0000000..d8962d1
+--- /dev/null
++++ b/directanswercards/documentsearch-standard-ellipses/component.js
+@@ -0,0 +1,79 @@
++{{> directanswercards/card_component componentName = 'documentsearch-standard-ellipses' }}
++
++class documentsearch_standard_ellipsesComponent extends BaseDirectAnswerCard['documentsearch-standard-ellipses'] {
++  constructor(config = {}, systemConfig = {}) {
++    super(config, systemConfig);
++  }
++
++  /**
++   * @param type the type of direct answer
++   * @param answer the full answer returned from the API, corresponds to response.directAnswer.answer.
++   * @param relatedItem profile of the related entity for the direct answer
++   * @param snippet the snippet for the document search direct answer
++   */
++  dataForRender(type, answer, relatedItem, snippet) {
++    const relatedItemData = relatedItem.data || {};
++    const linkTarget = AnswersExperience.runtimeConfig.get('linkTarget') || '_top';
++    const salesforcePageOrigin = AnswersExperience.runtimeConfig.get('salesforcePageOrigin');
++    const isChatterEnabled = AnswersExperience.runtimeConfig.get('isChatterEnabled') || false;
++    const areNotesEnabled = AnswersExperience.runtimeConfig.get('areNotesEnabled') || false;
++
++    let attachAsCase = (salesforcePageOrigin == "Case");
++    let postToChat = (salesforcePageOrigin == "LiveChatTranscript");
++
++    let snippetValue = '';
++    if (answer.fieldType === "rich_text" && snippet) {
++      snippetValue = ANSWERS.formatRichText(snippet.value, 'snippet', linkTarget);
++    } else if (snippet) {
++      snippetValue = Formatter.highlightField(snippet.value, snippet.matchedSubstrings);
++    }
++    let sanitizedValue = document.createElement('div');
++    sanitizedValue.innerHTML = snippetValue;
++    sanitizedValue = Array.from(sanitizedValue.children[0].children, child => child.outerHTML).join('').replace(/\n/g, "\\n");
++
++    return {
++      value: answer.value,
++      snippet: snippetValue, // Text snippet to include alongside the answer
++      viewDetailsText: relatedItemData.fieldValues && relatedItemData.fieldValues.name, // Text below the direct answer and snippet
++      viewDetailsLink: relatedItemData.website || (relatedItemData.fieldValues && relatedItemData.fieldValues.landingPageUrl), // Link for the "view details" text
++      viewDetailsEventOptions: this.addDefaultEventOptions({
++        ctaLabel: 'VIEW_DETAILS',
++        fieldName: 'snippet'
++      }), // The event options for viewDetails click analytics
++      linkTarget: linkTarget, // Target for all links in the direct answer
++      // CTA: {
++      //   label: '', // The CTA's label
++      //   iconName: 'chevron', // The icon to use for the CTA
++      //   url: '', // The URL a user will be directed to when clicking
++      //   target: linkTarget, // Where the new URL will be opened
++      //   eventType: 'CTA_CLICK', // Type of Analytics event fired when clicking the CTA
++      //   eventOptions: this.addDefaultEventOptions({ fieldName: 'snippet' }) // The event options for CTA click analytics
++      // },
++      footerTextOnSubmission: 'Thank you for your feedback!', // Text to display in the footer when a thumbs up/down is clicked
++      footerText: 'Was this the answer you were looking for?', // Text to display in the footer
++      positiveFeedbackSrText: 'This answered my question', // Screen reader only text for thumbs-up
++      negativeFeedbackSrText: 'This did not answer my question', // Screen reader only text for thumbs-down
++      menuCopyUrl: relatedItemData.website || (relatedItemData.fieldValues && relatedItemData.fieldValues.landingPageUrl),
++      menuCopyText: sanitizedValue,
++      attachAsCase: attachAsCase,
++      postToChat: postToChat,
++      isChatterEnabled: isChatterEnabled,
++      areNotesEnabled: areNotesEnabled,
++    };
++  }
++
++  /**
++   * The template to render
++   * @returns {string}
++   * @override
++   */
++  static defaultTemplateName (config) {
++    return 'directanswercards/documentsearch-standard-ellipses';
++  }
++}
++
++ANSWERS.registerTemplate(
++  'directanswercards/documentsearch-standard-ellipses',
++  {{{stringifyPartial (read 'directanswercards/documentsearch-standard-ellipses/template') }}}
++);
++ANSWERS.registerComponentType(documentsearch_standard_ellipsesComponent);
+diff --git a/directanswercards/documentsearch-standard-ellipses/template.hbs b/directanswercards/documentsearch-standard-ellipses/template.hbs
+new file mode 100644
+index 0000000..a97bb4f
+--- /dev/null
++++ b/directanswercards/documentsearch-standard-ellipses/template.hbs
+@@ -0,0 +1,170 @@
++<div class="HitchhikerDocumentSearchStandard {{cardName}}">
++  <div class="HitchhikerDocumentSearchStandard-titleAndContent">
++    {{> title }}
++    <div class="HitchhikerDocumentSearchStandard-content">
++      <div class="HitchhikerDocumentSearchStandard-column">
++        {{#unless value}} {{> copyMenu }} {{/unless}}
++        {{> featured_snippet }} 
++        {{> view_details_link }}
++      </div>
++      {{> cta CTA linkTarget=linkTarget}}
++    </div>
++  </div>
++  {{> footer}}
++</div>
++
++{{#*inline 'title'}}
++{{#if value}}
++  <h2 class="HitchhikerDocumentSearchStandard-title">
++    {{value}}
++    {{> copyMenu }}
++  </h2>
++{{/if}}
++{{/inline}}
++
++{{#* inline 'featured_snippet'}}
++{{#if snippet}}
++  <div class="HitchhikerDocumentSearchStandard-snippet">
++    {{{snippet}}}
++  </div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'view_details_link'}}
++{{#if (all viewDetailsLink viewDetailsText)}}
++  <div class="HitchhikerDocumentSearchStandard-viewMoreWrapper">
++    Read more about
++    <a class="HitchhikerDocumentSearchStandard-viewMore"
++        href="{{#unless (isNonRelativeUrl viewDetailsLink)}}{{@root.relativePath}}/{{/unless}}{{viewDetailsLink}}"
++        data-eventtype="CTA_CLICK"
++        data-eventoptions='{{{json viewDetailsEventOptions}}}'
++        target="{{#if linkTarget}}{{linkTarget}}{{else}}_blank{{/if}}">
++      {{viewDetailsText}}
++    </a>
++  </div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'footer'}}
++{{#if (any footerTextOnSubmission footerText)}}
++  <div class="HitchhikerDocumentSearchStandard-footerWrapper">
++    <div class="HitchhikerDocumentSearchStandard-footer">
++    {{#if feedbackSubmitted}}
++      <div class="HitchhikerDocumentSearchStandard-footerText">
++        {{footerTextOnSubmission}}
++      </div>
++    {{else}}
++      <div class="HitchhikerDocumentSearchStandard-footerText">
++        {{footerText}}
++      </div>
++      <form class="HitchhikerDocumentSearchStandard-thumbs js-HitchhikerDirectAnswerCard-feedbackForm">
++        <fieldset class="HitchhikerDocumentSearchStandard-fieldset">
++        <legend class="sr-only">
++          {{footerText}}
++        </legend>
++        <label class="HitchhikerDocumentSearchStandard-thumb">
++          <span class="HitchhikerDocumentSearchStandard-thumbUpIcon">
++            {{> icons/builtInIcon iconName='thumb' }}
++          </span>
++          <input type="radio"
++                  name="feedback"
++                  value="true"
++                  class="HitchhikerDocumentSearchStandard-feedback HitchhikerDocumentSearchStandard-thumbUpButton js-HitchhikerDirectAnswerCard-thumbInput">
++          <span class="sr-only">
++            {{positiveFeedbackSrText}}
++          </span>
++        </label>
++        <label class="HitchhikerDocumentSearchStandard-thumb">
++          <span class="HitchhikerDocumentSearchStandard-thumbDownIcon">
++            {{> icons/builtInIcon iconName='thumb' }}
++          </span>
++          <input type="radio"
++                  name="feedback"
++                  value="false"
++                  class="HitchhikerDocumentSearchStandard-feedback HitchhikerDocumentSearchStandard-thumbDownButton js-HitchhikerDirectAnswerCard-thumbInput">
++          <span class="sr-only">
++            {{negativeFeedbackSrText}}
++          </span>
++        </label>
++        </fieldset>
++        <button type="submit" class="sr-only sr-only-focusable">Send feedback</button>
++      </form>
++    {{/if}}
++    </div>
++  </div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'cta'}}
++{{#if (all url label)}}
++  <div class="HitchhikerDocumentSearchStandard-cta">
++    <a class="HitchhikerCTA js-HitchhikerCTA{{#if modifiers}} {{modifiers}}{{/if}}" href="{{#unless (isNonRelativeUrl url)}}{{@root.relativePath}}/{{/unless}}{{url}}"
++      data-eventtype="{{eventType}}" data-eventoptions='{{{json eventOptions}}}'
++      target="{{#if target}}{{target}}{{else}}{{#if linkTarget}}{{linkTarget}}{{else}}_blank{{/if}}{{/if}}">
++      {{#if (any iconName iconUrl)}}
++      <div class="HitchhikerCTA-iconWrapper">
++        <div class="HitchhikerCTA-icon">
++          {{> icons/iconPartial
++              iconName=iconName
++              iconUrl=(relativePathHandler url=iconUrl relativePath=@root.relativePath)
++          }}
++        </div>
++      </div>
++      {{/if}}
++      <div class='HitchhikerCTA-iconLabel'>
++        {{label}}
++      </div>
++    </a>
++  </div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'copyMenu'}}
++{{#if (any menuCopyText menuCopyUrl attachAsCase postToChat isChatterEnabled areNotesEnabled)}}
++<div class="copyMenuWrapper">
++  <button class="copyMenuButton">
++    {{> icons/iconPartial
++        iconName="kabob"
++    }}
++  </button>
++  <div class="copyMenuOptionsWrapper">
++    {{#if menuCopyUrl}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'copyLink', '{{menuCopyUrl}}')">
++        <li class="copyMenu-copy-option made-visible">Copy Result Link</li>
++        <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if menuCopyText}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'copyResultText', '{{viewDetailsText}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Copy Result Text</li>
++          <li class="copyMenu-copied-message"><div>Copied!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText attachAsCase)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'attachToCase', '{{viewDetailsText}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Attach to Case</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText areNotesEnabled)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'attachAsNote', '{{viewDetailsText}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Attach as Note</li>
++          <li class="copyMenu-copied-message"><div>Attached!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText postToChat)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'sendToChat', '{{viewDetailsText}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Send to Chat</li>
++          <li class="copyMenu-copied-message"><div>Sent!</div></li>
++      </ul>
++    {{/if}}
++    {{#if (all menuCopyText isChatterEnabled)}}
++      <ul onclick="HitchhikerJS.CustomModules.showCopiedMessageDirect(this, 'postToChatter', '{{viewDetailsText}}', '{{menuCopyText}}')">
++          <li class="copyMenu-copy-option made-visible">Post to Chatter</li>
++          <li class="copyMenu-copied-message"><div>Posted!</div></li>
++      </ul>
++    {{/if}}
++  </div>
++</div> 
++{{/if}}
++{{/inline}}
+\ No newline at end of file
+-- 
+2.36.0
+
