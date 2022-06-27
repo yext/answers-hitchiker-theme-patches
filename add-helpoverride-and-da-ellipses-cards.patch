@@ -1,4 +1,4 @@
-From ea8032536c1d1d2ad8a8b3619f6e5e3e9cb30610 Mon Sep 17 00:00:00 2001
+From c25af95124d1cbb9fe3f936bb9e2e5f5a481f925 Mon Sep 17 00:00:00 2001
 From: Oliver Shi <oshi@yext.com>
 Date: Mon, 27 Jun 2022 10:34:17 -0400
 Subject: [PATCH] Revert "inverse patch"
@@ -15,8 +15,8 @@ This reverts commit dc57700f658800c4f540f0243489ced90157e49a.
  .../template.hbs                              | 170 ++++++++++++
  static/js/custom-modules.js                   |  33 +++
  static/js/iframe-common.js                    | 137 ++++++++++
- static/scss/answers.scss                      |  92 ++++++-
- 11 files changed, 1410 insertions(+), 1 deletion(-)
+ static/scss/answers.scss                      |  90 +++++++
+ 11 files changed, 1409 insertions(+)
  create mode 100644 cards/card2/component.js
  create mode 100644 cards/card2/template.hbs
  create mode 100644 cards/helpoverride/component.js
@@ -1414,7 +1414,7 @@ index 0000000..c14f5bb
 +}
 \ No newline at end of file
 diff --git a/static/scss/answers.scss b/static/scss/answers.scss
-index f7e392c..58c51c6 100644
+index 79f853c..58c51c6 100644
 --- a/static/scss/answers.scss
 +++ b/static/scss/answers.scss
 @@ -4,9 +4,99 @@
@@ -1441,9 +1441,7 @@ index f7e392c..58c51c6 100644
  .Overlay
  {
    // Insert Overlay styling here
--}
-\ No newline at end of file
-+}
+ }
 +
 +.HitchhikerDocumentStandard-titleLink {
 +  display:inline-block;
