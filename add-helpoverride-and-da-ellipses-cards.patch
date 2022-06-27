@@ -1,24 +1,237 @@
-From 7f34c0aa082c0c42078b8784a44021a4d058268b Mon Sep 17 00:00:00 2001
+From ea8032536c1d1d2ad8a8b3619f6e5e3e9cb30610 Mon Sep 17 00:00:00 2001
 From: Oliver Shi <oshi@yext.com>
-Date: Wed, 8 Jun 2022 12:46:11 -0400
-Subject: [PATCH] Revert "remove cards/dacards"
+Date: Mon, 27 Jun 2022 10:34:17 -0400
+Subject: [PATCH] Revert "inverse patch"
 
-This reverts commit 9893cf82ebda5610bbebe1429ad13d6a5a8f9b96.
+This reverts commit dc57700f658800c4f540f0243489ced90157e49a.
 ---
+ cards/card2/component.js                      |  74 ++++++
+ cards/card2/template.hbs                      | 118 +++++++++
  cards/helpoverride/component.js               |  83 ++++++
  cards/helpoverride/template.hbs               | 144 +++++++++++
  .../allfields-standard-ellipses/component.js  | 243 ++++++++++++++++++
  .../allfields-standard-ellipses/template.hbs  | 238 +++++++++++++++++
  .../component.js                              |  79 ++++++
  .../template.hbs                              | 170 ++++++++++++
- 6 files changed, 957 insertions(+)
+ static/js/custom-modules.js                   |  33 +++
+ static/js/iframe-common.js                    | 137 ++++++++++
+ static/scss/answers.scss                      |  92 ++++++-
+ 11 files changed, 1410 insertions(+), 1 deletion(-)
+ create mode 100644 cards/card2/component.js
+ create mode 100644 cards/card2/template.hbs
  create mode 100644 cards/helpoverride/component.js
  create mode 100644 cards/helpoverride/template.hbs
  create mode 100644 directanswercards/allfields-standard-ellipses/component.js
  create mode 100644 directanswercards/allfields-standard-ellipses/template.hbs
  create mode 100644 directanswercards/documentsearch-standard-ellipses/component.js
  create mode 100644 directanswercards/documentsearch-standard-ellipses/template.hbs
+ create mode 100644 static/js/custom-modules.js
+ create mode 100644 static/js/iframe-common.js
 
+diff --git a/cards/card2/component.js b/cards/card2/component.js
+new file mode 100644
+index 0000000..a70d986
+--- /dev/null
++++ b/cards/card2/component.js
+@@ -0,0 +1,74 @@
++{{> cards/card_component componentName='card2' }}
++
++class card2CardComponent extends BaseCard['card2'] {
++  constructor(config = {}, systemConfig = {}) {
++    super(config, systemConfig);
++  }
++
++  /**
++   * This returns an object that will be called `card`
++   * in the template. Put all mapping logic here.
++   *
++   * @param profile profile of the entity in the card
++   */
++  dataForRender(profile) {
++    const linkTarget = AnswersExperience.runtimeConfig.get('linkTarget') || '_top';
++    
++    return {
++      title: profile.name, // The header text of the card
++      url: "https://csyextqa-dev-ed.lightning.force.com/lightning/r/Case/" + profile.id, // The URL a user will be directed to when clicking
++      target: linkTarget, // If the title's URL should open in a new tab, etc.
++      // image: '', // The URL of the image to display on the card
++      // altText: '', // The alternate text for the image
++      titleEventOptions: this.addDefaultEventOptions(),
++      subtitle: profile.salesforceCase_caseNumber + " || " + profile.salesforceCase_status, // The sub-header text of the card
++      details: profile.salesforceCase_description, // The text in the body of the card
++      // If the card's details are longer than a certain character count, you can truncate the
++      // text. A toggle will be supplied that can show or hide the truncated text.
++      showMoreDetails: {
++        showMoreLimit: 750, // Character count limit
++        showMoreText: 'Show more', // Label when toggle will show truncated text
++        showLessText: 'Show less' // Label when toggle will hide truncated text
++      },
++      // The primary CTA of the card
++      CTA1: {
++        label: "View Case", // The CTA's label
++        iconName: 'chevron', // The icon to use for the CTA
++        url: "https://csyextqa-dev-ed.lightning.force.com/lightning/r/Case/" + profile.id, // The URL a user will be directed to when clicking
++        target: linkTarget, // Where the new URL will be opened
++        eventType: 'CTA_CLICK', // Type of Analytics event fired when clicking the CTA
++        eventOptions: this.addDefaultEventOptions(),
++        // ariaLabel: '', // Accessible text providing a descriptive label for the CTA
++      },
++      // The secondary CTA of the card
++      // CTA2: {
++      //   label: profile.c_secondaryCTA ? profile.c_secondaryCTA.label : null,
++      //   iconName: 'chevron',
++      //   url: Formatter.generateCTAFieldTypeLink(profile.c_secondaryCTA),
++      //   target: linkTarget,
++      //   eventType: 'CTA_CLICK',
++      //   eventOptions: this.addDefaultEventOptions(),
++      //   // ariaLabel: '',
++      // },
++      feedback: false, // Shows thumbs up/down buttons to provide feedback on the result card
++      feedbackTextOnSubmission: 'Thanks!', // Text to display after a thumbs up/down is clicked
++      positiveFeedbackSrText: 'This answered my question', // Screen reader only text for thumbs-up
++      negativeFeedbackSrText: 'This did not answer my question' // Screen reader only text for thumbs-down
++    };
++  }
++
++  /**
++   * The template to render
++   * @returns {string}
++   * @override
++   */
++  static defaultTemplateName (config) {
++    return 'cards/card2';
++  }
++}
++
++ANSWERS.registerTemplate(
++  'cards/card2',
++  {{{stringifyPartial (read 'cards/card2/template') }}}
++);
++ANSWERS.registerComponentType(card2CardComponent);
+diff --git a/cards/card2/template.hbs b/cards/card2/template.hbs
+new file mode 100644
+index 0000000..7551cfd
+--- /dev/null
++++ b/cards/card2/template.hbs
+@@ -0,0 +1,118 @@
++<div class="HitchhikerStandard {{cardName}}">
++  {{> image }}
++  <div class="HitchhikerStandard-body">
++    {{> title }}
++    {{> subtitle }}
++    <div class="HitchhikerStandard-contentWrapper">
++      <div class="HitchhikerStandard-info">
++        {{> details }}
++      </div>
++      {{> ctas }}
++    </div>
++    {{> thumbsfeedback card feedbackSubmitted=feedbackSubmitted}}
++  </div>
++</div>
++
++{{#*inline 'image'}}
++{{#if card.image}}
++<div class="HitchhikerStandard-imgWrapper">
++  <img class="HitchhikerStandard-img" src="{{#unless (isNonRelativeUrl card.image)}}{{@root.relativePath}}/{{/unless}}{{card.image}}" alt="{{#if card.altText}}{{card.altText}}{{/if}}"/>
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'title'}}
++{{#if card.title}}
++<div class="HitchhikerStandard-title">
++  {{#if card.url}}
++  <a class="HitchhikerStandard-titleLink js-HitchhikerStandard-titleLink"
++     href="{{#unless (isNonRelativeUrl card.url)}}{{@root.relativePath}}/{{/unless}}{{card.url}}"
++     data-eventtype="TITLE_CLICK"
++     data-eventoptions='{{json card.titleEventOptions}}'
++     target={{#if card.target}}"{{card.target}}"{{else}}"_top"{{/if}}>
++    {{card.title}}
++  </a>
++  {{else}}
++  {{card.title}}
++  {{/if}}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'subtitle'}}
++{{#if card.subtitle}}
++<div class="HitchhikerStandard-subtitle">
++  {{card.subtitle}}
++</div>
++{{/if}}
++{{/inline}}
++
++{{! Displays the details for the card. If showMoreDetails has been configured,
++    this partial handles the show more toggle, show less toggle, truncated details,
++    and full details. If showMoreDetails has not been configured, it will display the
++    the regular card details.
++}}
++{{#*inline 'details'}}
++{{#if card.details}}
++<div class="HitchhikerStandard-cardDetails">
++  {{#if showExcessDetailsToggle}}
++    <div class="HitchhikerStandard-detailsText js-HitchhikerCard-detailsText">
++      {{truncatedDetails}}
++    </div>
++  {{/if}}
++  <div class="HitchhikerStandard-detailsText js-HitchhikerCard-detailsText{{#if showExcessDetailsToggle}} js-hidden{{/if}}">
++    {{card.details}}
++  </div>
++  {{#if showExcessDetailsToggle}}
++  <button class="HitchhikerCard-detailsToggle js-HitchhikerCard-detailsToggle">
++    {{card.showMoreDetails.showMoreText}}
++    <span>
++      {{> icons/builtInIcon iconName='chevron' classNames='Icon--sm Icon--collapseDown' }}
++    </span>
++  </button>
++  <button class="HitchhikerCard-detailsToggle js-HitchhikerCard-detailsToggle js-hidden">
++    {{card.showMoreDetails.showLessText}}
++    <span>
++      {{> icons/builtInIcon iconName='chevron' classNames='Icon--sm Icon--collapseUp' }}
++    </span>
++  </button>
++  {{/if}}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'ctas'}}
++{{#if (any (all card.CTA1 card.CTA1.url card.CTA1.label) (all card.CTA2 card.CTA2.url card.CTA2.label))}}
++<div class="HitchhikerStandard-ctasWrapper">
++  {{> CTA card.CTA1 ctaName="primaryCTA" }}
++  {{> CTA card.CTA2 ctaName="secondaryCTA" }}
++</div>
++{{/if}}
++{{/inline}}
++
++{{#*inline 'CTA'}}
++{{#if (all url label)}}
++<div class="HitchhikerStandard-{{ctaName}}">
++  <a class="HitchhikerCTA js-HitchhikerCTA{{#if modifiers}} {{modifiers}}{{/if}}"
++    href="{{#unless (isNonRelativeUrl url)}}{{@root.relativePath}}/{{/unless}}{{url}}"
++    data-eventtype="{{eventType}}"
++    data-eventoptions='{{json eventOptions}}'
++    target="{{#if target}}{{target}}{{else}}_top{{/if}}"
++    {{#if ariaLabel}}aria-label="{{ariaLabel}}"{{/if}}>
++    {{#if (any iconName iconUrl)}}
++    <div class="HitchhikerCTA-iconWrapper">
++      <div class="HitchhikerCTA-icon">
++        {{> icons/iconPartial
++            iconName=iconName
++            iconUrl=(relativePathHandler url=iconUrl relativePath=@root.relativePath)
++        }}
++      </div>
++    </div>
++    {{/if}}
++    <div class='HitchhikerCTA-iconLabel'>
++      {{label}}
++    </div>
++  </a>
++</div>
++{{/if}}
++{{/inline}}
 diff --git a/cards/helpoverride/component.js b/cards/helpoverride/component.js
 new file mode 100644
 index 0000000..066e10b
@@ -1016,6 +1229,296 @@ index 0000000..a97bb4f
 +{{/if}}
 +{{/inline}}
 \ No newline at end of file
+diff --git a/static/js/custom-modules.js b/static/js/custom-modules.js
+new file mode 100644
+index 0000000..ca737ff
+--- /dev/null
++++ b/static/js/custom-modules.js
+@@ -0,0 +1,33 @@
++// Modules exported here will be included in bundle.js
++export function showCopiedMessage(button, eventType, card) {
++  card["eventType"] = eventType;
++  card["isDirectAnswer"] = false;
++  parent.postMessage(card, "*");
++
++  var optionText = button.getElementsByClassName("copyMenu-copy-option")[0];
++  optionText.classList.add('not-visible');
++  optionText.classList.remove('made-visible');
++  var copiedText = button.getElementsByClassName("copyMenu-copied-message")[0];
++  copiedText.classList.add('made-visible');
++  setTimeout(function() { 
++    optionText.classList.add('made-visible');
++    optionText.classList.remove('not-visible');
++    copiedText.classList.remove('made-visible');
++    }, 2000);
++};
++
++export function showCopiedMessageDirect(button, eventType, title, value) {
++  var card = {"eventType": eventType, "isDirectAnswer": true, "title": title, "value": value};
++  parent.postMessage(card, "*");
++
++  var optionText = button.getElementsByClassName("copyMenu-copy-option")[0];
++  optionText.classList.add('not-visible');
++  optionText.classList.remove('made-visible');
++  var copiedText = button.getElementsByClassName("copyMenu-copied-message")[0];
++  copiedText.classList.add('made-visible');
++  setTimeout(function() { 
++    optionText.classList.add('made-visible');
++    optionText.classList.remove('not-visible');
++    copiedText.classList.remove('made-visible');
++    }, 2000);
++};
+\ No newline at end of file
+diff --git a/static/js/iframe-common.js b/static/js/iframe-common.js
+new file mode 100644
+index 0000000..c14f5bb
+--- /dev/null
++++ b/static/js/iframe-common.js
+@@ -0,0 +1,137 @@
++require('iframe-resizer');
++
++let iframeInitialized = false;
++const iframeMessageQueue = [];
++
++/**
++ * @typedef {import('./runtime-config')} RuntimeConfig
++ */
++
++/**
++ * Puts an iframe on the page of an Answers experience and sets up resizing and cross-domain communication
++ * 
++ * @param {string} domain The location of the answers experience
++ * @param {AnswersExperienceFrame} answersExperienceFrame
++ */
++export function generateIFrame(domain, answersExperienceFrame) {
++  var isLocalHost = window.location.host.split(':')[0] === 'localhost';
++  var containerEl = document.querySelector('#answers-container');
++  var iframe = document.createElement('iframe');
++  var pathToIndex = containerEl.dataset.path;
++  iframe.allow = 'geolocation; clipboard-read; clipboard-write';
++
++  domain = domain || '';
++
++  var calcFrameSrc = function() {
++    var paramString = window.location.search;
++    paramString = paramString.substr(1, paramString.length);
++
++    // Parse the params out of the URL
++    var params = paramString.split('&'),
++                 verticalUrl;
++    var referrerPageUrl = document.referrer.split('?')[0].split('#')[0];
++
++    if (pathToIndex) {
++      verticalUrl = pathToIndex;
++    } else if (isLocalHost) {
++      verticalUrl = 'index.html'; // Default for localhost is index.html, empty o/w
++    }
++
++    // Don't include the verticalUrl or raw referrerPageUrl in the frame src
++    var new_params = params.filter(function(param) {
++       return (param.split('=')[0] !== 'verticalUrl') &&
++        (param.split('=')[0] !== 'referrerPageUrl');
++    });
++
++    for (var i = 0; i < params.length; i ++) {
++      var kv = params[i].split('=');
++      if (kv[0] === 'verticalUrl') {
++        verticalUrl = kv[1];
++      }
++
++      if (kv[0] === 'referrerPageUrl') {
++        referrerPageUrl = kv[1];
++      }
++    }
++
++    new_params.push('referrerPageUrl=' + referrerPageUrl);
++
++    // Build the Iframe URL
++    var iframeUrl = domain;
++    if (verticalUrl) {
++      iframeUrl += '/' + verticalUrl;
++    }
++
++    iframeUrl += '?' + new_params.join('&');
++    return iframeUrl;
++  };
++  
++  iframe.src = calcFrameSrc();
++  iframe.frameBorder = 0;
++
++   // For dynamic iFrame sizing
++  iframe.style.width = '1px';
++  iframe.style.minWidth = '100%';
++  iframe.id = 'answers-frame';
++
++  // Scroll to the top of the page when the iframe loads or a link is clicked.
++  iframe.addEventListener('load', () => {
++    document.documentElement.scrollTop = 0;
++    // For Safari
++    document.body.scrollTop = 0;
++  });
++
++  window.onpopstate = function() {
++    iframe.contentWindow.location.replace(calcFrameSrc());
++  };
++
++  containerEl.appendChild(iframe);
++
++  // For dynamic iFrame resizing
++  iFrameResize({
++    checkOrigin: false,
++    onInit: function() {
++      iframeInitialized = true;
++      iframeMessageQueue.push({
++        initAnswersExperience: answersExperienceFrame.hasManuallyInitialized(),
++        runtimeConfig: answersExperienceFrame.runtimeConfig.getAll()
++      });
++      while (iframeMessageQueue.length !== 0) {
++        sendToIframe(iframeMessageQueue.shift());
++      }
++    },
++    onMessage: function(messageData) {
++      const message = JSON.parse(messageData.message);
++      if (message.action === "paginate") {
++        const iframeOffsetTop = iframe.offsetTop;
++        document.documentElement.scrollTop = iframeOffsetTop;
++        document.body.scrollTop = iframeOffsetTop; // For Safari
++        return;
++      }
++      const params = message.params;
++      const pageTitle = message.pageTitle;
++      pageTitle && (iframe.title = pageTitle);
++      iframe.iFrameResizer.resize();
++      var currLocation = window.location.href.split('?')[0];
++      var newLocation = currLocation + '?' + params;
++      if (window.location.href !== newLocation) {
++        history.replaceState({query: params}, window.document.title, newLocation);
++      }
++    }
++  }, '#answers-frame');
++}
++
++/**
++ * Sends data to the answers iframe if possible. Otherwise the message is queued
++ * so that it can be sent when the iframe initializes.
++ * @param {Object} obj 
++ */
++export function sendToIframe (obj) {
++  const iframe = document.querySelector('#answers-frame');
++  if (!iframe || !iframe.iFrameResizer || !iframeInitialized) {
++    iframeMessageQueue.push(obj);
++  }
++  else {
++    iframe.iFrameResizer.sendMessage(obj);
++  }
++}
+\ No newline at end of file
+diff --git a/static/scss/answers.scss b/static/scss/answers.scss
+index f7e392c..58c51c6 100644
+--- a/static/scss/answers.scss
++++ b/static/scss/answers.scss
+@@ -4,9 +4,99 @@
+   //&-nav {
+   //  padding-top: 32px;
+   //}
++  // .yxt-Nav-container {
++  //   display: none;
++  // }
++
++  // .HitchhikerResultsStandard-viewMore {
++  //   display: none;
++  // }
++
++  .HitchhikerDocumentSearchStandard-snippet {
++    .js-yxt-rtfValue {
++      p {
++        margin-bottom: var(--yxt-base-spacing)/2;
++      }
++    }
++  }
+ }
+ 
+ .Overlay
+ {
+   // Insert Overlay styling here
+-}
+\ No newline at end of file
++}
++
++.HitchhikerDocumentStandard-titleLink {
++  display:inline-block;
++}
++
++.copyMenuWrapper {
++  position: relative;
++  margin-left: auto;
++  padding: 0.5%;
++  border-radius: 2px;
++  float: right;
++  visibility:  hidden;
++}
++
++#js-answersDirectAnswer:hover .copyMenuWrapper,
++.HitchhikerResultsStandard-Card:hover .copyMenuWrapper {
++  visibility: visible;
++}
++
++.copyMenuWrapper .copyMenuButton {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++}
++
++.copyMenuWrapper .copyMenuOptionsWrapper {
++  position: absolute;
++  background-color: var(--hh-answers-background-color);
++  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
++  border-radius: var(--yxt-border-radius);
++  right: 0px;
++  top: 100%;
++  font-size: var(--yxt-font-size-md);
++  font-weight: normal;
++  z-index: 1;
++}
++.copyMenuWrapper ul {
++  list-style: none;
++  margin: 10%;
++  padding: 0;
++  display: none;
++  flex-wrap: wrap;
++}
++
++.copyMenuWrapper ul li {
++  min-width: 160px;
++  display: none;
++  flex-direction: column;
++  color: var(--yxt-color-text-primary);
++}
++
++.copyMenuWrapper:hover {
++  background-color: rgb(161, 161, 161, 0.5);
++}
++
++.copyMenuWrapper ul li:hover {
++  color: var(--yxt-color-brand-hover);
++  cursor: pointer;
++}
++
++.copyMenuWrapper:hover ul,
++.copyMenuWrapper:hover ul li.copyMenu-copy-option.made-visible,
++.copyMenuWrapper:hover ul li.copyMenu-copied-message.made-visible,
++.copyMenuWrapper ul li.copyMenu-copied-message.made-visible div
++{
++  display: flex;
++}
++
++.copyMenu-copied-message,
++.copyMenu-copied-message div,
++.copyMenuWrapper:hover ul li.copyMenu-copy-option.not-visible,
++.copyMenuWrapper ul li.copyMenu-copy-option.not-visible div
++{
++  display: none;
++}
 -- 
-2.36.0
+2.36.1
 
