@@ -1,9 +1,9 @@
-From c25af95124d1cbb9fe3f936bb9e2e5f5a481f925 Mon Sep 17 00:00:00 2001
+From 622a7faf704c9d9444e245fafa66aa746e92de68 Mon Sep 17 00:00:00 2001
 From: Oliver Shi <oshi@yext.com>
-Date: Mon, 27 Jun 2022 10:34:17 -0400
-Subject: [PATCH] Revert "inverse patch"
+Date: Wed, 6 Jul 2022 17:17:22 -0400
+Subject: [PATCH] Revert "remove stuff again"
 
-This reverts commit dc57700f658800c4f540f0243489ced90157e49a.
+This reverts commit 240242a9ef6dd2e3dcf9e9e40702e24b1cfa2daa.
 ---
  cards/helpoverride/component.js               |  83 ++++++
  cards/helpoverride/template.hbs               | 144 +++++++++++
@@ -13,8 +13,8 @@ This reverts commit dc57700f658800c4f540f0243489ced90157e49a.
  .../template.hbs                              | 170 ++++++++++++
  static/js/custom-modules.js                   |  33 +++
  static/js/iframe-common.js                    | 137 ++++++++++
- static/scss/answers.scss                      |  90 +++++++
- 9 files changed, 1217 insertions(+)
+ static/scss/answers.scss                      |  92 ++++++-
+ 9 files changed, 1218 insertions(+), 1 deletion(-)
  create mode 100644 cards/helpoverride/component.js
  create mode 100644 cards/helpoverride/template.hbs
  create mode 100644 directanswercards/allfields-standard-ellipses/component.js
@@ -1206,7 +1206,7 @@ index 0000000..c14f5bb
 +}
 \ No newline at end of file
 diff --git a/static/scss/answers.scss b/static/scss/answers.scss
-index 79f853c..58c51c6 100644
+index f7e392c..58c51c6 100644
 --- a/static/scss/answers.scss
 +++ b/static/scss/answers.scss
 @@ -4,9 +4,99 @@
@@ -1233,7 +1233,9 @@ index 79f853c..58c51c6 100644
  .Overlay
  {
    // Insert Overlay styling here
- }
+-}
+\ No newline at end of file
++}
 +
 +.HitchhikerDocumentStandard-titleLink {
 +  display:inline-block;
